@@ -1,0 +1,42 @@
+stages:
+  boot:
+    - name: "Setup groups"
+      ensure_entities:
+        - entity: |
+            kind: "group"
+            group_name: "admin"
+            password: "x"
+            gid: 900
+        - entity: |
+            kind: "group"
+            group_name: "elemental"
+            password: "x"
+            gid: 1000
+    - name: "Setup users"
+      users:
+        elemental:
+          name: "elemental"
+          passwd: "$6$L1K6j9SrfpLmC6bW$uYyjGC/eO1WoJpZ3hhewsPjSkOJwgOUTyTQuK3HK0wb5HubJILtB4agzpXl.U0voeqhShBxzrWqHmgQczgtaF."
+          groups:
+            - "admin"
+            - "systemd-journal"
+          primary_group: "elemental"
+          shell: /bin/bash
+          ssh_authorized_keys:
+            - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIN3Trbi3L21QECLF067lbZU4tjV2l3wnhE++C7PTZ6mQ
+          homedir: "/home/elemental"
+    - name: "Setup sudo"
+      files:
+        - path: "/etc/sudoers"
+          owner: 0
+          group: 0
+          permissions: 0600
+          content: |
+            Defaults always_set_home
+            Defaults secure_path="/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/bin:/usr/local/sbin"
+            Defaults env_reset
+            Defaults env_keep = "LANG LC_ADDRESS LC_CTYPE LC_COLLATE LC_IDENTIFICATION LC_MEASUREMENT LC_MESSAGES LC_MONETARY LC_NAME LC_NUMERIC LC_PAPER LC_TELEPHONE LC_ATIME LC_ALL LANGUAGE LINGUAS XDG_SESSION_COOKIE"
+            Defaults !insults
+            root ALL=(ALL) ALL
+            %admin ALL=(ALL) NOPASSWD: ALL
+            @includedir /etc/sudoers.d
