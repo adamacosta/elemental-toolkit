@@ -17,6 +17,7 @@ tests/**/logs
 tests/vmstdout
 serial_port1.log
 capture.webm
+**/*.fd
 
 .vscode/
 bin/
