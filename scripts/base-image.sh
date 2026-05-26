@@ -1,6 +1,8 @@
 #!/bin/sh
 
-ROOT_DIR="$(dirname $(dirname $(realpath $0)))"
+set -e
+
+ROOT_DIR="$(dirname "$(dirname "$(realpath "$0")")")"
 
 GIT_TAG=$(git describe --abbrev=0 --tags)
 

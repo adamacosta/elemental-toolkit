@@ -7,13 +7,16 @@ SCRIPTS_PATH=$(dirname "${SCRIPT}")
 TESTS_PATH=$(realpath -s "${SCRIPTS_PATH}/../tests")
 
 : "${ELMNTL_PREFIX:=}" 
-: "${ELMNTL_FIRMWARE:=/usr/share/edk2/x64/OVMF.4m.fd}"
+: "${ELMNTL_FIRMWARE:=/usr/share/edk2/x64/OVMF_CODE.4m.fd}"
+: "${ELMNTL_NVRAM:=/usr/share/edk2/x64/OVMF_VARS.4m.fd}"
 : "${ELMNTL_FWDIP:=127.0.0.1}"
 : "${ELMNTL_FWDPORT:=2222}"
 : "${ELMNTL_MEMORY:=4096}"
 : "${ELMNTL_LOGFILE:=${TESTS_PATH}/${ELMNTL_PREFIX}serial.log}"
+: "${ELMNTL_FWLOGFILE:=${TESTS_PATH}/${ELMNTL_PREFIX}ovmf.log}"
 : "${ELMNTL_PIDFILE:=${TESTS_PATH}/${ELMNTL_PREFIX}testvm.pid}"
 : "${ELMNTL_TESTDISK:=${TESTS_PATH}/${ELMNTL_PREFIX}testdisk.qcow2}"
+: "${ELMNTL_TESTNVRAM:=${TESTS_PATH}/${ELMNTL_PREFIX}OVMF_VARS.4m.fd}"
 : "${ELMNTL_VMSTDOUT:=${TESTS_PATH}/${ELMNTL_PREFIX}vmstdout}"
 : "${ELMNTL_DISKSIZE:=16G}"
 : "${ELMNTL_ACCEL:=kvm}"
@@ -28,15 +31,17 @@ function _abort {
 
 function start {
   local base_disk=$1
-  local usrnet_arg="-netdev user,id=net0,ipv6=off,net=10.240.10.0/24,dnssearch=localdomain,hostfwd=tcp:${ELMNTL_FWDIP}:${ELMNTL_FWDPORT}-:22 -device virtio-net,netdev=net0"
+  local usrnet_arg="-netdev passt,id=net0,ipv6=off,net=10.240.10.0/24,dnssearch=localdomain,hostfwd=tcp:${ELMNTL_FWDIP}:${ELMNTL_FWDPORT}-:22 -device virtio-net,netdev=net0"
   local accel_arg
   local memory_arg="-m ${ELMNTL_MEMORY}"
-  local firmware_arg="-bios ${ELMNTL_FIRMWARE}"
-  local disk_arg="-drive file=${ELMNTL_TESTDISK},id=drive0,if=none -device virtio-blk,drive=drive0"
+  local firmware_arg="-drive file=${ELMNTL_FIRMWARE},format=raw,if=pflash,readonly=on"
+  local nvram_arg="-drive file=${ELMNTL_TESTNVRAM},format=raw,if=pflash"
+  local disk_arg="-drive file=${ELMNTL_TESTDISK},id=drive0,if=none -device virtio-blk,drive=drive0,bootindex=0"
   local serial_arg="-serial file:${ELMNTL_LOGFILE}"
   local pidfile_arg="-pidfile ${ELMNTL_PIDFILE}"
   local display_arg="-nographic"
   local machine_arg="-machine type=${ELMNTL_MACHINETYPE}"
+  local fw_dbg_arg="-global isa-debugcon.iobase=0x402 -debugcon file:${ELMNTL_FWLOGFILE}"
   local cdrom_arg
   local cpu_arg
   local vmpid
@@ -71,11 +76,15 @@ function start {
   [ "hvf" == "${ELMNTL_ACCEL}" ] && accel_arg="-accel ${ELMNTL_ACCEL}" && cpu_arg="-cpu max,-pdpe1gb"
   [ "kvm" == "${ELMNTL_ACCEL}" ] && cpu_arg="-cpu host" && accel_arg="-accel kvm"
 
+  cp "$ELMNTL_NVRAM" "$ELMNTL_TESTNVRAM"
+
   if [ "${ELMNTL_DEBUG}" == "yes" ]; then
       qemu-system-${ELMNTL_TARGETARCH} \
         ${disk_arg} \
         ${cdrom_arg} \
         ${firmware_arg} \
+        ${nvram_arg} \
+        ${fw_dbg_arg} \
         ${usrnet_arg} \
         ${memory_arg} \
         ${graphics_arg} \
@@ -89,6 +98,8 @@ function start {
         ${disk_arg} \
         ${cdrom_arg} \
         ${firmware_arg} \
+        ${nvram_arg} \
+        ${fw_dbg_arg} \
         ${usrnet_arg} \
         ${memory_arg} \
         ${graphics_arg} \
@@ -124,6 +135,8 @@ function clean {
   ([ -f "${ELMNTL_LOGFILE}" ] && rm -f "${ELMNTL_LOGFILE}") || true
   ([ -f "${ELMNTL_TESTDISK}" ] && rm -f "${ELMNTL_TESTDISK}") || true
   ([ -f "${ELMNTL_VMSTDOUT}" ] && rm -f "${ELMNTL_VMSTDOUT}") || true
+  ([ -f "${ELMNTL_TESTNVRAM}" ] && rm -f "${ELMNTL_TESTNVRAM}") || true
+  ([ -f "${ELMNTL_FWLOGFILE}" ] && rm -f "${ELMNTL_FWLOGFILE}") || true
 }
 
 function vmpid {

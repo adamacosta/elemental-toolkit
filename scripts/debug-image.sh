@@ -1,6 +1,8 @@
 #!/bin/sh
 
-ROOT_DIR="$(dirname $(dirname $(realpath $0)))"
+set -e
+
+ROOT_DIR="$(dirname "$(dirname "$(realpath "$0")")")"
 
 GIT_TAG=$(git describe --abbrev=0 --tags)
 
@@ -10,7 +12,7 @@ REPO="local/elemental-${FLAVOR}:${VERSION}"
 
 sed 's/^\(.*set kernelcmd=.*\)"/\1 rd\.break rd\.debug"/' \
   "$ROOT_DIR/pkg/features/embedded/grub-default-bootargs/etc/elemental/bootargs.cfg" \
-  > "$ROOT_DIR/examples/$FLAVOR/bootargs.cfg"
+  >"$ROOT_DIR/examples/$FLAVOR/bootargs.cfg"
 
 [ -f "$ROOT_DIR/examples/$FLAVOR/SCCcredentials" ] || "$ROOT_DIR/scripts/scc-credentials.sh" "$FLAVOR"
 
@@ -19,6 +21,10 @@ FROM $REPO
 COPY bootargs.cfg /etc/elemental/bootargs.cfg
 COPY SCCcredentials /etc/zypp/credentials.d/SCCcredentials
 RUN zypper install -y \
+    bind-utils \
+    efibootmgr \
+    efivar \
+    netcat-openbsd \
     net-snmp \
     nfs-client \
     strace \

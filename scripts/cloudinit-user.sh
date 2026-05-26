@@ -1,8 +1,10 @@
 #!/bin/sh
 
-ROOT_DIR="$(dirname $(dirname $(realpath $0)))"
+set -e
 
-cat <<EOF | yq '.' | sed '/^$/d' > "$ROOT_DIR/tests/assets/user_setup.yaml"
+ROOT_DIR="$(dirname "$(dirname "$(realpath "$0")")")"
+
+cat <<EOF | yq '.' | sed '/^$/d' >"$ROOT_DIR/tests/assets/user_setup.yaml"
 stages:
   boot:
     - name: "Setup groups"
