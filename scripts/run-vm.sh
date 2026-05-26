@@ -31,7 +31,7 @@ function _abort {
 
 function start {
   local base_disk=$1
-  local usrnet_arg="-netdev passt,id=net0,ipv6=off,net=10.240.10.0/24,dnssearch=localdomain,hostfwd=tcp:${ELMNTL_FWDIP}:${ELMNTL_FWDPORT}-:22 -device virtio-net,netdev=net0"
+  local usrnet_arg="-netdev user,id=net0,ipv6=off,net=10.240.10.0/24,dnssearch=localdomain,hostfwd=tcp:${ELMNTL_FWDIP}:${ELMNTL_FWDPORT}-:22 -device virtio-net,netdev=net0"
   local accel_arg
   local memory_arg="-m ${ELMNTL_MEMORY}"
   local firmware_arg="-drive file=${ELMNTL_FIRMWARE},format=raw,if=pflash,readonly=on"
@@ -66,7 +66,7 @@ function start {
         ;;
       *.iso)
         qemu-img create -f qcow2 "${ELMNTL_TESTDISK}" "${ELMNTL_DISKSIZE}" > /dev/null
-        cdrom_arg="-drive file=${base_disk},readonly=on,if=none,id=cdrom,media=cdrom -device virtio-scsi,id=scsi0 -device scsi-cd,bus=scsi0.0,drive=cdrom,bootindex=2"
+        cdrom_arg="-drive file=${base_disk},readonly=on,if=none,id=cdrom,media=cdrom -device virtio-scsi,id=scsi0 -device scsi-cd,bus=scsi0.0,drive=cdrom,bootindex=1"
         ;;
       *)
         _abort "Expected a *.qcow2 or *.iso file"
@@ -80,6 +80,8 @@ function start {
 
   if [ "${ELMNTL_DEBUG}" == "yes" ]; then
       qemu-system-${ELMNTL_TARGETARCH} \
+        ${accel_arg} \
+        ${cpu_arg} \
         ${disk_arg} \
         ${cdrom_arg} \
         ${firmware_arg} \
@@ -89,10 +91,8 @@ function start {
         ${memory_arg} \
         ${graphics_arg} \
         ${pidfile_arg} \
-        ${display_arg} \
         ${machine_arg} \
-        ${accel_arg} \
-        ${cpu_arg}
+        ${display_arg}
   else 
       qemu-system-${ELMNTL_TARGETARCH} \
         ${disk_arg} \
